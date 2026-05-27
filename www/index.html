@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The System — Infinite Horizon</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --surface: #161618;
+    --surface2: #1e1e21;
+    --border: #2a2a2e;
+    --accent: #c8a96e;
+    --accent2: #7eb8a4;
+    --accent3: #a07ebf;
+    --text: #e8e4dc;
+    --text-muted: #7a7870;
+    --text-dim: #4a4845;
+    --danger: #d4645a;
+    --success: #6ab394;
+    --phase1: #c8a96e;
+    --phase2: #7eb8a4;
+    --phase3: #a07ebf;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.4;
+  }
+
+  .app { max-width: 980px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+  .auth-box { background: var(--surface); border: 1px solid var(--border); padding: 2.5rem; width: 100%; max-width: 400px; }
+  .auth-box h2 { font-family: 'DM Serif Display', serif; font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--text); }
+  .auth-box p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2rem; }
+  .auth-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem; }
+  .auth-profile-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s; font-family: 'DM Mono', monospace; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
+  .auth-profile-btn:hover { border-color: var(--accent); }
+  .auth-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.8rem 1rem; font-family: 'Instrument Sans', sans-serif; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; color-scheme: dark; }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-submit-btn { width: 100%; background: var(--accent); color: #0e0e0f; border: none; padding: 0.8rem; font-family: 'DM Mono', monospace; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+  .auth-submit-btn:hover { opacity: 0.9; }
+  .create-toggle { background: none; border: none; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; text-decoration: underline; margin-top: 1rem; width: 100%; text-align: center; }
+
+  /* ── MODALS (SETTINGS & PROMPTS) ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(14,14,15,0.9); z-index: 20000; display: none; padding: 2rem; overflow-y: auto; justify-content: center; align-items: center; }
+  .modal-content { background: var(--surface); border: 1px solid var(--border); max-width: 600px; width: 100%; margin: auto; padding: 2rem; position: relative; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  .modal-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--text); }
+  
+  .settings-phase-block { background: var(--surface2); border: 1px solid var(--border); padding: 1rem; margin-bottom: 1rem; }
+  .settings-phase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  .settings-phase-title { font-family: 'DM Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+  .settings-habit-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 0.6rem 1rem; margin-bottom: 0.5rem; border: 1px solid var(--border); gap: 1rem; }
+  .settings-habit-info { flex: 1; min-width: 0; }
+  .settings-habit-info strong { font-size: 0.85rem; display: block; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .settings-habit-info span { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-dim); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .settings-habit-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  
+  .btn-small { background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 0.6rem; text-transform: uppercase; padding: 0.3rem 0.6rem; cursor: pointer; transition: all 0.2s; }
+  .btn-small:hover { color: var(--text); border-color: var(--text); }
+  .btn-small.danger:hover { color: var(--danger); border-color: var(--danger); }
+  .btn-small.accent:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* CUSTOM PROMPT MODAL */
+  .prompt-overlay { position: fixed; inset: 0; background: rgba(14,14,15,0.95); z-index: 30000; display: none; align-items: center; justify-content: center; padding: 2rem; }
+  .prompt-box { background: var(--surface); border: 1px solid var(--border); padding: 2rem; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .prompt-box h3 { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em; }
+  .prompt-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.9rem; font-family: 'Instrument Sans', sans-serif; margin-bottom: 1.5rem; outline: none; transition: border-color 0.2s; font-size: 1rem; color-scheme: dark; }
+  .prompt-input:focus { border-color: var(--accent); }
+  .prompt-actions { display: flex; gap: 0.8rem; justify-content: flex-end; }
+
+  /* ── MASCOT & GREETING ── */
+  .app-bar { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1.5rem; }
+  .greeting-section { display: flex; align-items: center; gap: 0.5rem; }
+  .mascot-container { position: relative; width: 45px; height: 45px; flex-shrink: 0; animation: float 3s ease-in-out infinite; display: flex; justify-content: center; }
+  .mascot-svg { width: 100%; height: 100%; filter: drop-shadow(0 0 6px rgba(200,169,110,0.6)); }
+  .mascot-shadow { width: 25px; height: 5px; background: rgba(0,0,0,0.4); border-radius: 50%; position: absolute; bottom: -8px; left: 50%; margin-left: -12.5px; animation: shadowPulse 3s ease-in-out infinite; }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes shadowPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(0.7); opacity: 0.1; } }
+  .greeting-bubble { background: var(--surface); border: 1px solid var(--border); padding: 0.7rem 1.2rem; border-radius: 4px; position: relative; margin-left: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .greeting-bubble::before { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 10px; height: 10px; background: var(--surface); border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .greeting-text { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); line-height: 1.2; }
+  .greeting-sub { font-family: 'Instrument Sans', sans-serif; font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-top: 0.2rem; }
+  .global-streak-badge { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--danger); background: rgba(212, 100, 90, 0.1); padding: 0.3rem 0.7rem; border-radius: 2px; border: 1px solid rgba(212, 100, 90, 0.3); display: none; margin-left: 0.5rem; }
+  .global-streak-badge.active { display: inline-block; }
+  .profile-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+  .profile-btn { background: transparent; border: 1px solid var(--border); color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.4rem 0.8rem; cursor: pointer; transition: all 0.2s; }
+  .profile-btn:hover { border-color: var(--text); color: var(--text); }
+  .profile-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  #import-input { display: none; }
+
+  /* ── UPCOMING HABIT SQUARCLE ── */
+  .upcoming-squarcle {
+    background: linear-gradient(135deg, rgba(200,169,110,0.12), rgba(126,184,164,0.08));
+    border: 1px solid rgba(200,169,110,0.4); border-radius: 16px; padding: 1.2rem 1.5rem;
+    margin-bottom: 2rem; cursor: pointer; animation: floatSlow 5s ease-in-out infinite;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3); transition: transform 0.2s, background 0.2s, border-color 0.2s;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .upcoming-squarcle:hover { background: linear-gradient(135deg, rgba(200,169,110,0.2), rgba(126,184,164,0.15)); transform: scale(1.015); border-color: var(--accent); }
+  .upcoming-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.15em; display: flex; justify-content: space-between;}
+  .upcoming-name { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--text); line-height: 1.2; }
+  @keyframes floatSlow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+  /* ── QUOTE BANNER ── */
+  .quote-banner { background: linear-gradient(135deg, rgba(200,169,110,0.08), rgba(126,184,164,0.06)); border-bottom: 1px solid var(--border); padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 1.2rem; position: relative; overflow: hidden; }
+  .quote-banner::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(to bottom, var(--accent), var(--accent2)); }
+  .quote-type-pill { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.2rem 0.55rem; border-radius: 2px; flex-shrink: 0; }
+  .quote-type-pill.stoic { background: rgba(200,169,110,0.15); color: var(--phase1); border: 1px solid rgba(200,169,110,0.3); }
+  .quote-type-pill.bible { background: rgba(126,184,164,0.15); color: var(--phase2); border: 1px solid rgba(126,184,164,0.3); }
+  .quote-banner-text { flex: 1; min-width: 0; }
+  .quote-banner-text p { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 0.92rem; color: var(--text-muted); line-height: 1.5; }
+  .quote-banner-text cite { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.08em; display: block; margin-top: 0.25rem; }
+  .quote-refresh-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 0.8rem; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; border-radius: 2px; }
+  .quote-refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── HEADER ── */
+  header { display: flex; align-items: flex-end; justify-content: space-between; padding: 1rem 0 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap; }
+  .header-left h1 { font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .header-left h1 span { color: var(--accent); font-style: italic; }
+  .header-left .subtitle { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.4rem; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+  #live-clock { font-family: 'DM Mono', monospace; font-size: 1.4rem; color: var(--text); letter-spacing: 0.05em; }
+  #current-date { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.05em; }
+  #day-type-badge { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.25rem 0.7rem; border-radius: 2px; border: 1px solid var(--accent); color: var(--accent); }
+
+  /* ── CALENDAR ── */
+  .calendar-block { background: var(--surface); border: 1px solid var(--border); margin-bottom: 2rem; overflow: hidden; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.2rem; border-bottom: 1px solid var(--border); }
+  .cal-month-label { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--text); letter-spacing: 0.01em; }
+  .cal-nav-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); width: 28px; height: 28px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; border-radius: 2px; }
+  .cal-nav-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .cal-today-btn { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 0.25rem 0.7rem; cursor: pointer; transition: all 0.15s; border-radius: 2px; }
+  .cal-today-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-dow { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); text-align: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+  .cal-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; position: relative; transition: all 0.15s; border: 1px solid transparent; margin: 1px; }
+  .cal-cell:hover:not(.empty) { background: var(--surface2); color: var(--text); }
+  .cal-cell.empty { cursor: default; color: var(--text-dim); opacity: 0.3; }
+  .cal-cell.today { color: var(--accent); font-weight: 600; }
+  .cal-cell.today::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+  .cal-cell.selected { background: var(--accent); color: #0e0e0f; font-weight: 700; }
+  .cal-cell.selected.today::after { background: #0e0e0f; }
+  .cal-cell.has-data::before { content: ''; position: absolute; top: 4px; right: 4px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent2); opacity: 0.7; }
+  .cal-cell.selected.has-data::before { background: rgba(0,0,0,0.4); }
+  .cal-cell[data-heat="1"] { background: rgba(200,169,110,0.07); }
+  .cal-cell[data-heat="2"] { background: rgba(200,169,110,0.15); }
+  .cal-cell[data-heat="3"] { background: rgba(200,169,110,0.25); }
+  .cal-cell[data-heat="4"] { background: rgba(200,169,110,0.38); }
+  .cal-cell.selected[data-heat] { background: var(--accent); }
+
+  /* ── STATS ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 1.1rem 1.3rem; position: relative; overflow: hidden; }
+  .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
+  .stat-card.s1::after { background: var(--phase1); }
+  .stat-card.s2::after { background: var(--phase2); }
+  .stat-card.s3::after { background: var(--phase3); }
+  .stat-card.s4::after { background: var(--accent2); }
+  .stat-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .stat-value { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--text); line-height: 1; }
+  .stat-sub { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+  /* ── PROGRESS ── */
+  .day-progress { background: var(--surface); border: 1px solid var(--border); padding: 1.1rem 1.4rem; margin-bottom: 2rem; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.7rem; }
+  .progress-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .progress-pct { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); }
+  .progress-track { height: 4px; background: var(--border); overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+  /* ── PHASES ── */
+  .phase-section { margin-bottom: 2rem; animation: fadeIn 0.3s ease both; }
+  .phase-section:nth-child(1) { animation-delay: 0.05s; }
+  .phase-section:nth-child(2) { animation-delay: 0.1s; }
+  .phase-section:nth-child(3) { animation-delay: 0.15s; }
+  .phase-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; cursor: pointer; user-select: none; transition: opacity 0.2s; }
+  .phase-header:hover { opacity: 0.8; }
+  .phase-chevron { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 1.2rem; color: var(--text-dim); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .phase-section.collapsed .phase-chevron { transform: rotate(-90deg); }
+  .phase-section.collapsed .habits-grid { display: none; }
+  .phase-tag { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.25rem 0.7rem; border-radius: 1px; }
+  .phase-tag.p1 { background: rgba(200,169,110,0.12); color: var(--phase1); border: 1px solid rgba(200,169,110,0.25); }
+  .phase-tag.p2 { background: rgba(126,184,164,0.12); color: var(--phase2); border: 1px solid rgba(126,184,164,0.25); }
+  .phase-tag.p3 { background: rgba(160,126,191,0.12); color: var(--phase3); border: 1px solid rgba(160,126,191,0.25); }
+  .phase-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.05rem; color: var(--text); font-weight: 400; margin: 0; }
+
+  /* ── HABIT CARDS ── */
+  .habits-grid { display: grid; gap: 0.5rem; }
+  .habit-card { background: var(--surface); border: 1px solid var(--border); display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 0.9rem 1.1rem; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; gap: 1rem; }
+  .habit-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; transition: background 0.2s; }
+  .habit-card.p1::before { background: var(--phase1); opacity: 0.3; }
+  .habit-card.p2::before { background: var(--phase2); opacity: 0.3; }
+  .habit-card.p3::before { background: var(--phase3); opacity: 0.3; }
+  .habit-card:hover { border-color: var(--text-dim); }
+  .habit-card.done { background: var(--surface2); }
+  .habit-card.done::before { opacity: 1; }
+  .habit-card.done .habit-name { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--text-dim); }
+  .habit-left { display: flex; flex-direction: column; gap: 0.2rem; }
+  .habit-name { font-size: 0.88rem; font-weight: 500; color: var(--text); transition: color 0.2s; line-height: 1.3; }
+  .habit-meta-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .habit-meta { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.04em; }
+  .habit-time-pill { font-family: 'DM Mono', monospace; font-size: 0.55rem; padding: 0.15rem 0.4rem; border: 1px solid var(--border); border-radius: 2px; color: var(--accent); }
+  .habit-right { display: flex; align-items: center; gap: 0.7rem; flex-shrink: 0; }
+  .streak-badge { font-family: 'DM Mono', monospace; font-size: 0.63rem; color: var(--text-dim); white-space: nowrap; }
+  .streak-badge.hot { color: var(--accent); }
+  .check-box { width: 22px; height: 22px; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+  .habit-card:hover .check-box { border-color: var(--text-dim); }
+  .habit-card.done .check-box { border-color: var(--accent); background: var(--accent); }
+  .check-icon { opacity: 0; transform: scale(0.5); transition: all 0.2s; color: #0e0e0f; font-size: 13px; line-height: 1; }
+  .habit-card.done .check-icon { opacity: 1; transform: scale(1); }
+
+  /* ── JOURNAL & LOGS ── */
+  .journal-section { background: var(--surface); border: 1px solid var(--border); padding: 1.4rem; margin-bottom: 2rem; }
+  .journal-section h3 { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; }
+  .journal-entries-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem; }
+  .journal-entry-card { background: var(--surface2); border: 1px solid var(--border); padding: 1rem; border-radius: 2px; position: relative; }
+  .journal-entry-text { font-family: 'Instrument Sans', sans-serif; font-size: 0.85rem; color: var(--text); line-height: 1.6; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; transition: all 0.3s ease; }
+  .journal-entry-card.expanded .journal-entry-text { -webkit-line-clamp: unset; display: block; }
+  .journal-entry-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; border-top: 1px solid var(--border); padding-top: 0.5rem; }
+  .journal-time { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;}
+  .journal-tag { font-family: 'DM Mono', monospace; font-size: 0.55rem; padding: 0.15rem 0.4rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tag-morning { background: rgba(200,169,110,0.15); color: var(--accent); border: 1px solid rgba(200,169,110,0.3); }
+  .tag-evening { background: rgba(160,126,191,0.15); color: var(--accent3); border: 1px solid rgba(160,126,191,0.3); }
+  .tag-other { background: rgba(126,184,164,0.15); color: var(--accent2); border: 1px solid rgba(126,184,164,0.3); }
+  .journal-actions { display: flex; gap: 0.8rem; }
+  .journal-action-btn { background: none; border: none; color: var(--accent2); font-family: 'DM Mono', monospace; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; transition: color 0.2s; }
+  .journal-action-btn:hover { color: var(--text); }
+  .journal-textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'Instrument Sans', sans-serif; font-size: 0.875rem; line-height: 1.7; padding: 0.9rem 1rem; resize: vertical; min-height: 100px; outline: none; transition: border-color 0.2s; }
+  .journal-textarea:focus { border-color: var(--text-dim); }
+  .journal-textarea::placeholder { color: var(--text-dim); }
+  .journal-controls { display: flex; gap: 0.8rem; margin-top: 0.7rem; }
+  .journal-save-btn { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem 1.3rem; background: transparent; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+  .journal-save-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .journal-save-btn.saved { border-color: var(--success); color: var(--success); }
+  .journal-cancel-btn { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem 1.3rem; background: transparent; border: 1px solid var(--border); color: var(--danger); cursor: pointer; transition: all 0.2s; display: none; }
+  .journal-cancel-btn:hover { border-color: var(--danger); background: rgba(212, 100, 90, 0.1); }
+
+  /* ── HEATMAP ── */
+  .section-title { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .heatmap-container { background: var(--surface); border: 1px solid var(--border); padding: 1.4rem; margin-bottom: 2.5rem; overflow-x: auto; }
+  .heatmap-grid { display: flex; gap: 3px; flex-wrap: nowrap; }
+  .heatmap-week { display: flex; flex-direction: column; gap: 3px; }
+  .heatmap-cell { width: 13px; height: 13px; background: var(--surface2); border-radius: 2px; transition: all 0.15s; position: relative; }
+  .heatmap-cell:hover::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.6rem; padding: 0.3rem 0.6rem; white-space: nowrap; pointer-events: none; z-index: 10; }
+  .heatmap-cell[data-level="1"] { background: rgba(200,169,110,0.2); }
+  .heatmap-cell[data-level="2"] { background: rgba(200,169,110,0.4); }
+  .heatmap-cell[data-level="3"] { background: rgba(200,169,110,0.65); }
+  .heatmap-cell[data-level="4"] { background: var(--accent); }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(1rem); background: var(--surface2); border: 1px solid var(--border); padding: 0.7rem 1.4rem; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.08em; color: var(--text); opacity: 0; transition: all 0.3s; z-index: 1000; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 600px) {
+    .app { padding: 0 1rem 5rem; }
+    header { padding: 1.4rem 0; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    #live-clock { font-size: 1.1rem; }
+    .cal-cell { font-size: 0.68rem; }
+    .app-bar { flex-direction: column; align-items: flex-start; }
+    .modal-content { padding: 1rem; margin: 1rem; }
+    .settings-habit-row { flex-direction: column; align-items: flex-start; }
+    .settings-habit-actions { width: 100%; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 0.5rem; margin-top: 0.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box" id="auth-login-box">
+    <h2>Profiles</h2>
+    <p>Select your profile to continue.</p>
+    <div class="auth-list" id="auth-profile-list"></div>
+    <button class="create-toggle" onclick="showCreateProfile()">Create New Profile</button>
+  </div>
+
+  <div class="auth-box" id="auth-create-box" style="display:none;">
+    <h2>New Profile</h2>
+    <p>Set up your space.</p>
+    <input type="text" id="new-profile-name" class="auth-input" placeholder="Your Name" autocomplete="off">
+    <input type="password" id="new-profile-pin" class="auth-input" placeholder="PIN Code (Optional)" autocomplete="new-password">
+    <button class="auth-submit-btn" onclick="createProfile()">Create & Login</button>
+    <button class="create-toggle" onclick="showLogin()">Back to Profiles</button>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL (Habit Editor) -->
+<div class="modal-overlay" id="settings-modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Edit Phases & Habits</h2>
+      <button class="btn-small" onclick="closeSettings()">Done</button>
+    </div>
+    <div id="settings-phases-container"></div>
+    <button class="auth-submit-btn" style="margin-top: 1.5rem;" onclick="addNewPhase()">+ Add New Phase</button>
+  </div>
+</div>
+
+<!-- MORNING JOURNAL MODAL -->
+<div class="modal-overlay" id="morning-modal" style="display:none;">
+  <div class="modal-content" style="max-width: 500px; text-align: center;">
+    <h2 style="font-family: 'DM Serif Display', serif; color: var(--accent); margin-bottom: 0.5rem;">Morning Reflection</h2>
+    <div id="morning-quote" style="font-family: 'Instrument Sans', serif; font-style: italic; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;"></div>
+    <textarea id="morning-textarea" class="journal-textarea" placeholder="Clear your mind. What are your intentions for today?"></textarea>
+    <button class="auth-submit-btn" style="margin-top: 1rem;" onclick="saveMorningJournal()">Start the Day</button>
+    <button class="create-toggle" onclick="closeMorningModal()">Skip for now</button>
+  </div>
+</div>
+
+<!-- CUSTOM PROMPT MODAL -->
+<div class="prompt-overlay" id="custom-prompt-modal" style="display:none;">
+  <div class="prompt-box">
+    <h3 id="prompt-msg">Message</h3>
+    <input type="text" id="prompt-input" class="prompt-input" autocomplete="off">
+    <div class="prompt-actions">
+      <button class="btn-small" id="prompt-cancel">Cancel</button>
+      <button class="btn-small accent" style="color:var(--accent); border-color:var(--accent);" id="prompt-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP (Hidden until logged in) -->
+<div id="main-app" style="display:none;">
+  
+  <!-- QUOTE BANNER -->
+  <div class="quote-banner" id="quote-banner">
+    <span class="quote-type-pill" id="quote-pill">Stoic</span>
+    <div class="quote-banner-text">
+      <p id="banner-quote-text"></p>
+      <cite id="banner-quote-author"></cite>
+    </div>
+    <button class="quote-refresh-btn" id="quote-refresh-btn" title="New quote">↻</button>
+  </div>
+
+  <div class="app">
+
+    <!-- APP BAR: MASCOT, GREETING & CONTROLS -->
+    <div class="app-bar">
+      <div class="greeting-section">
+        <!-- SYSTEM MASCOT (GRID DOT SPHERE) -->
+        <div style="position: relative;">
+          <div class="mascot-container">
+            <svg class="mascot-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <g stroke="var(--accent)" stroke-width="2.5" fill="none" stroke-dasharray="0.1 8" stroke-linecap="round">
+                <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="40s" repeatCount="indefinite" />
+                <ellipse cx="50" cy="50" rx="36" ry="36" />
+                <ellipse cx="50" cy="50" rx="24" ry="36" />
+                <ellipse cx="50" cy="50" rx="12" ry="36" />
+                <ellipse cx="50" cy="50" rx="36" ry="24" />
+                <ellipse cx="50" cy="50" rx="36" ry="12" />
+              </g>
+              <g stroke="var(--accent)" stroke-width="2" fill="none" stroke-dasharray="0.1 6" stroke-linecap="round" opacity="0.5">
+                 <animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="20s" repeatCount="indefinite" />
+                 <ellipse cx="50" cy="50" rx="20" ry="20" />
+                 <ellipse cx="50" cy="50" rx="10" ry="20" />
+                 <ellipse cx="50" cy="50" rx="20" ry="10" />
+              </g>
+              <circle cx="50" cy="50" r="3" fill="var(--accent)">
+                 <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
+          <div class="mascot-shadow"></div>
+        </div>
+        
+        <div class="greeting-bubble">
+          <div class="greeting-text" id="greeting-text">Good morning, User.</div>
+          <div class="greeting-sub" id="greeting-sub">Let's build today.</div>
+        </div>
+        <div class="global-streak-badge" id="global-streak-badge"></div>
+      </div>
+      
+      <div class="profile-controls">
+        <button class="profile-btn" onclick="openSettings()">Edit Habits</button>
+        <button class="profile-btn" onclick="exportData()">Export</button>
+        <button class="profile-btn" onclick="document.getElementById('import-input').click()">Import</button>
+        <input type="file" id="import-input" accept=".json" onchange="importData(event)">
+        <button class="profile-btn danger" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- UPCOMING HABIT SQUARCLE -->
+    <div id="upcoming-squarcle" class="upcoming-squarcle" style="display:none;" onclick="completeUpcomingHabit()">
+      <div class="upcoming-label"><span>Next Action Required</span> <span id="upcoming-time"></span></div>
+      <div class="upcoming-name" id="upcoming-name"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header>
+      <div class="header-left">
+        <h1>The <span>System</span></h1>
+        <div class="subtitle">Infinite Horizon · Habit Tracker</div>
+      </div>
+      <div class="header-right">
+        <div id="live-clock">00:00:00</div>
+        <div id="current-date"></div>
+        <div id="day-type-badge">—</div>
+      </div>
+    </header>
+
+    <!-- CALENDAR -->
+    <div class="calendar-block">
+      <div class="cal-header">
+        <button class="cal-nav-btn" id="cal-prev">‹</button>
+        <span class="cal-month-label" id="cal-month-label"></span>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button class="cal-today-btn" id="cal-today-btn">Today</button>
+          <button class="cal-nav-btn" id="cal-next">›</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card s1">
+        <div class="stat-label">Selected Day</div>
+        <div class="stat-value" id="stat-today">0%</div>
+        <div class="stat-sub">completion rate</div>
+      </div>
+      <div class="stat-card s2">
+        <div class="stat-label">Best Streak</div>
+        <div class="stat-value" id="stat-streak">0</div>
+        <div class="stat-sub">days</div>
+      </div>
+      <div class="stat-card s3">
+        <div class="stat-label">This Week</div>
+        <div class="stat-value" id="stat-week">0</div>
+        <div class="stat-sub">habits done</div>
+      </div>
+      <div class="stat-card s4">
+        <div class="stat-label">Days Logged</div>
+        <div class="stat-value" id="stat-days">0</div>
+        <div class="stat-sub">total</div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="day-progress">
+      <div class="progress-header">
+        <div class="progress-label">Daily Progress</div>
+        <div class="progress-pct" id="progress-pct">0%</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- HABITS -->
+    <div id="habits-container"></div>
+
+    <!-- JOURNAL -->
+    <div class="journal-section">
+      <h3>Daily Journal · Urge Surfing Log</h3>
+      
+      <div id="journal-entries-list" class="journal-entries-list"></div>
+      
+      <textarea class="journal-textarea" id="journal-textarea" placeholder="What are you feeling right now? Lonely, bored, stressed? Write it out. Acknowledge it. Let the wave pass."></textarea>
+      
+      <div class="journal-controls">
+        <button class="journal-save-btn" id="journal-save-btn">Save Entry</button>
+        <button class="journal-cancel-btn" id="journal-cancel-btn">Cancel Edit</button>
+      </div>
+    </div>
+
+    <!-- HEATMAP -->
+    <div class="section-title">Activity — Last 3 Months</div>
+    <div class="heatmap-container">
+      <div class="heatmap-grid" id="heatmap-grid"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== CUSTOM ASYNC PROMPTS =====================
+function customPrompt(message, type = 'text', defaultValue = '') {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('custom-prompt-modal');
+    const msgEl = document.getElementById('prompt-msg');
+    const inputEl = document.getElementById('prompt-input');
+    const confirmBtn = document.getElementById('prompt-confirm');
+    const cancelBtn = document.getElementById('prompt-cancel');
+
+    msgEl.textContent = message;
+    inputEl.type = type;
+    inputEl.style.display = 'block';
+    inputEl.value = defaultValue;
+    overlay.style.display = 'flex';
+    inputEl.focus();
+
+    const cleanup = () => {
+      overlay.style.display = 'none';
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      inputEl.removeEventListener('keydown', onEnter);
+    };
+
+    const onConfirm = () => { cleanup(); resolve(inputEl.value); };
+    const onCancel = () => { cleanup(); resolve(null); };
+    const onEnter = (e) => { if (e.key === 'Enter') onConfirm(); };
+
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    inputEl.addEventListener('keydown', onEnter);
+  });
+}
+
+function customConfirm(message) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('custom-prompt-modal');
+    const msgEl = document.getElementById('prompt-msg');
+    const inputEl = document.getElementById('prompt-input');
+    const confirmBtn = document.getElementById('prompt-confirm');
+    const cancelBtn = document.getElementById('prompt-cancel');
+
+    msgEl.textContent = message;
+    inputEl.style.display = 'none'; // Hide input for confirm dialog
+    overlay.style.display = 'flex';
+
+    const cleanup = () => {
+      overlay.style.display = 'none';
+      inputEl.style.display = 'block'; // reset for next prompt
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+    };
+
+    const onConfirm = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+// ===================== DEFAULT DATA TEMPLATE =====================
+const DEFAULT_PHASES = [
+  {
+    id: "phase1", label: "Phase 1", title: "Environment & System Calibration", class: "p1",
+    habits: [
+      { id: "wake_5am",     name: "Wake at 5:00 AM",                  meta: "10-to-5 Protocol",            days: "all", time: "05:00" },
+      { id: "devotion",     name: "5 AM prayer & scripture",          meta: "First 15 min of the day",     days: "all", time: "05:10" },
+      { id: "hydration",    name: "Proper hydration",                 meta: "Hydrate on wake-up",          days: "all", time: "05:15" },
+      { id: "workout",      name: "Morning workout complete",         meta: "Dumbbell circuit / 20km bike",days: "all", time: "06:30" },
+      { id: "deep_work",    name: "Deep work / meaningful project",   meta: "High-value creation",         days: "all", time: "09:00" },
+      { id: "urge_surfing", name: "Urge surfed — no scrolling / lust",meta: "Dopamine Detox",              days: "all", time: "12:00" },
+      { id: "meal_prep",    name: "Meal prepped",                     meta: "Batch cook or packed lunch",  days: "all", time: "19:00" },
+      { id: "stoic_review", name: "Stoic reflection",                 meta: "Dichotomy of Control",        days: "all", time: "20:00" },
+      { id: "screens_off",  name: "Screens off by 9:15 PM",           meta: "Digital curfew",              days: "all", time: "21:15" },
+      { id: "reading_45",   name: "45 min physical book + journal",   meta: "9:15–10:00 PM wind-down",     days: "all", time: "21:15" },
+      { id: "phone_out",    name: "Phone charger in other room",      meta: "No screens in bedroom",       days: "all", time: "21:30" },
+      { id: "sleep_10pm",   name: "In bed by 10:00 PM",               meta: "10-to-5 Protocol",            days: "all", time: "22:00" }
+    ]
+  }
+];
+
+// ===================== PROFILES & AUTH =====================
+let profiles = JSON.parse(localStorage.getItem('system_profiles') || '[]');
+let activeProfile = null;
+let data = {}; 
+
+function initAuth() {
+  const list = document.getElementById('auth-profile-list');
+  list.innerHTML = '';
+  if (profiles.length === 0) {
+    list.innerHTML = '<p style="text-align:center; font-size:0.8rem; color:var(--text-dim);">No profiles found.</p>';
+  } else {
+    profiles.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'auth-profile-btn';
+      btn.innerHTML = `<span>${p.name}</span> <span>→</span>`;
+      btn.onclick = () => login(p.id);
+      list.appendChild(btn);
+    });
+  }
+}
+
+function showCreateProfile() {
+  document.getElementById('auth-login-box').style.display = 'none';
+  document.getElementById('auth-create-box').style.display = 'block';
+}
+
+function showLogin() {
+  document.getElementById('auth-create-box').style.display = 'none';
+  document.getElementById('auth-login-box').style.display = 'block';
+}
+
+function createProfile() {
+  const name = document.getElementById('new-profile-name').value.trim();
+  const pin = document.getElementById('new-profile-pin').value.trim();
+  if (!name) return showToast("Name is required");
+  const newProfile = { id: 'user_' + Date.now(), name: name, pin: pin };
+  profiles.push(newProfile);
+  localStorage.setItem('system_profiles', JSON.stringify(profiles));
+  document.getElementById('new-profile-name').value = '';
+  document.getElementById('new-profile-pin').value = '';
+  login(newProfile.id, pin);
+}
+
+async function login(id, bypassPin = null) {
+  const profile = profiles.find(p => p.id === id);
+  if (!profile) return;
+  if (profile.pin && bypassPin !== profile.pin) {
+    const enteredPin = await customPrompt(`Enter PIN for ${profile.name}:`, 'password');
+    if (enteredPin === null) return; 
+    if (enteredPin !== profile.pin) return showToast("Incorrect PIN");
+  }
+  
+  activeProfile = profile;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  
+  data = loadData();
+  updateGreeting();
+  renderAll();
+  showToast(`Welcome back, ${profile.name}`);
+  
+  // Run Automations after slight delay
+  setTimeout(checkAutomations, 1000);
+}
+
+function logout() {
+  activeProfile = null; data = {};
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  initAuth(); showLogin();
+}
+
+function getStorageKey() { return `system_tracker_${activeProfile.id}`; }
+
+// ===================== DATA & STORAGE =====================
+function exportData() {
+  if (!activeProfile) return;
+  const dataStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `${activeProfile.name.replace(/\s+/g, '_')}_system_data.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Profile data exported!");
+}
+
+function importData(event) {
+  if (!activeProfile) return;
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      data = JSON.parse(e.target.result);
+      saveData(); renderAll(); showToast("Data imported successfully!");
+    } catch (err) { showToast("Error reading file."); }
+    document.getElementById('import-input').value = '';
+  };
+  reader.readAsText(file);
+}
+
+function loadData() {
+  if (!activeProfile) return {};
+  try {
+    let loadedData = JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
+    if (!loadedData.phases) loadedData.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
+    return loadedData;
+  } catch { return {}; }
+}
+function saveData() { if (activeProfile) localStorage.setItem(getStorageKey(), JSON.stringify(data)); }
+
+function getDayRecord(dateKey) {
+  if (!data[dateKey]) data[dateKey] = { habits: {}, journalEntries: [] };
+  if (typeof data[dateKey].journal === 'string') {
+    const oldText = data[dateKey].journal;
+    data[dateKey].journalEntries = oldText ? [{ id: Date.now(), text: oldText, timestamp: "Legacy Entry", tag: "Other" }] : [];
+    delete data[dateKey].journal; 
+  }
+  if (!data[dateKey].journalEntries) data[dateKey].journalEntries = [];
+  return data[dateKey];
+}
+
+function isHabitDone(dateKey, habitId) { return !!(getDayRecord(dateKey).habits[habitId]); }
+function toggleHabit(dateKey, habitId) {
+  const rec = getDayRecord(dateKey);
+  rec.habits[habitId] = !rec.habits[habitId];
+  saveData();
+}
+
+// ===================== AUTOMATIONS =====================
+async function checkAutomations() {
+  const now = new Date();
+  const hour = now.getHours();
+  const tk = todayKey();
+
+  // 1. Morning Journal Prompt (1 AM to 11:59 AM)
+  if (hour >= 1 && hour < 12) {
+    if (data.lastMorningPrompt !== tk) {
+      // Pick random stoic quote
+      const stoics = QUOTES.filter(q => q.type === 'stoic');
+      const q = stoics[Math.floor(Math.random() * stoics.length)];
+      document.getElementById('morning-quote').innerHTML = `"${q.text}"<br><br>— ${q.author}`;
+      document.getElementById('morning-modal').style.display = 'flex';
+      return; // pause other automations until this is handled
+    }
+  }
+
+  // 2. Sunday Backup Prompt (Sunday is 0, after 6 PM)
+  if (now.getDay() === 0 && hour >= 18) {
+    if (data.lastBackupPrompt !== tk) {
+      const wantBackup = await customConfirm("It's Sunday evening. Would you like to export your weekly data for backup?");
+      if (wantBackup) {
+        exportData();
+      }
+      data.lastBackupPrompt = tk;
+      saveData();
+    }
+  }
+}
+
+function closeMorningModal() {
+  data.lastMorningPrompt = todayKey();
+  saveData();
+  document.getElementById('morning-modal').style.display = 'none';
+  checkAutomations(); // check backup if applicable
+}
+
+function saveMorningJournal() {
+  const text = document.getElementById('morning-textarea').value.trim();
+  if (text) {
+    const rec = getDayRecord(todayKey());
+    const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    rec.journalEntries.push({ id: Date.now(), text: text, timestamp: timeStr, tag: "Morning Journal" });
+  }
+  document.getElementById('morning-textarea').value = '';
+  closeMorningModal();
+  renderJournal();
+}
+
+// ===================== HABIT EDITOR (SETTINGS) =====================
+function openSettings() { document.getElementById('settings-modal').style.display = 'block'; renderSettings(); }
+function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; saveData(); renderAll(); }
+
+function renderSettings() {
+  const container = document.getElementById('settings-phases-container');
+  container.innerHTML = '';
+
+  data.phases.forEach((phase, pIndex) => {
+    const pBlock = document.createElement('div'); pBlock.className = 'settings-phase-block';
+    let html = `
+      <div class="settings-phase-header">
+        <div>
+          <div class="settings-phase-title">${phase.label}</div>
+          <div style="font-family:'DM Serif Display',serif; color:var(--text);">${phase.title}</div>
+        </div>
+        <button class="btn-small danger" onclick="deletePhase(${pIndex})">Delete Phase</button>
+      </div>
+      <div style="margin-bottom: 1rem;">
+    `;
+    phase.habits.forEach((habit, hIndex) => {
+      html += `
+        <div class="settings-habit-row">
+          <div class="settings-habit-info" title="${habit.name} - ${habit.meta}">
+            <strong>${habit.name}</strong>
+            <span>Time: ${habit.time || 'None'} | ${habit.meta || 'No subtext'}</span>
+          </div>
+          <div class="settings-habit-actions">
+            <button class="btn-small accent" onclick="editHabit(${pIndex}, ${hIndex})">Edit</button>
+            <button class="btn-small danger" onclick="deleteHabit(${pIndex}, ${hIndex})">Delete</button>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div><button class="btn-small" onclick="addNewHabit(${pIndex})">+ Add Habit</button>`;
+    pBlock.innerHTML = html; container.appendChild(pBlock);
+  });
+}
+
+window.addNewPhase = async function() {
+  const label = await customPrompt("Phase Label (e.g., 'Phase 1'):"); if (!label) return;
+  const title = await customPrompt("Phase Title:"); if (title === null) return;
+  const pClass = 'p' + ((data.phases.length % 3) + 1);
+  data.phases.push({ id: 'phase_' + Date.now(), label, title: title || '', class: pClass, habits: [] });
+  renderSettings();
+};
+window.deletePhase = async function(pIndex) {
+  if(await customConfirm("Delete this entire phase and all its habits?")) { data.phases.splice(pIndex, 1); renderSettings(); }
+};
+window.addNewHabit = async function(pIndex) {
+  const name = await customPrompt("Habit Name:"); if (!name) return;
+  const meta = await customPrompt("Subtext (optional):"); if (meta === null) return;
+  const time = await customPrompt("Time (HH:MM):", "time", "08:00"); if (time === null) return;
+  data.phases[pIndex].habits.push({ id: 'habit_' + Date.now(), name, meta: meta || '', time: time || '', days: 'all' });
+  renderSettings();
+};
+window.editHabit = async function(pIndex, hIndex) {
+  const habit = data.phases[pIndex].habits[hIndex];
+  const newName = await customPrompt("Edit Name:", "text", habit.name); if (!newName) return; 
+  const newMeta = await customPrompt("Edit Subtext:", "text", habit.meta); if (newMeta === null) return; 
+  const newTime = await customPrompt("Edit Time (HH:MM):", "time", habit.time || ""); if (newTime === null) return; 
+  habit.name = newName; habit.meta = newMeta; habit.time = newTime;
+  renderSettings();
+};
+window.deleteHabit = async function(pIndex, hIndex) {
+  if (await customConfirm("Delete this habit?")) { data.phases[pIndex].habits.splice(hIndex, 1); renderSettings(); }
+};
+
+// ===================== GREETINGS & QUOTES =====================
+const MOTIVATIONS = ["Let's get to work.", "Stay focused.", "Master your habits.", "Discipline equals freedom.", "Trust the process.", "One step at a time.", "Control what you can.", "Keep moving forward.", "The obstacle is the way."];
+const QUOTES = [
+  { type: 'stoic', text: "You have power over your mind, not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+  { type: 'stoic', text: "Make the best use of what is in your power, and take the rest as it happens.", author: "Epictetus" },
+  { type: 'stoic', text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
+  { type: 'stoic', text: "First say to yourself what you would be; and then do what you have to do.", author: "Epictetus" },
+  { type: 'stoic', text: "The impediment to action advances action. What stands in the way becomes the way.", author: "Marcus Aurelius" },
+  { type: 'stoic', text: "Luck is what happens when preparation meets opportunity.", author: "Seneca" },
+  { type: 'stoic', text: "We suffer more in imagination than in reality.", author: "Seneca" },
+  { type: 'stoic', text: "If it is not right do not do it; if it is not true do not say it.", author: "Marcus Aurelius" },
+  { type: 'bible', text: "I can do all things through Christ who strengthens me.", author: "Philippians 4:13" },
+  { type: 'bible', text: "Be strong and courageous. Do not be afraid; do not be discouraged...", author: "Joshua 1:9" },
+  { type: 'bible', text: "Trust in the Lord with all your heart and lean not on your own understanding.", author: "Proverbs 3:5" }
+];
+let currentQuoteIdx = Math.floor(Math.random() * QUOTES.length);
+
+function updateGreeting() {
+  if (!activeProfile) return;
+  const hour = new Date().getHours();
+  let timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  document.getElementById('greeting-text').textContent = `${timeGreeting}, ${activeProfile.name}.`;
+  document.getElementById('greeting-sub').textContent = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+  
+  const streakBadge = document.getElementById('global-streak-badge');
+  const streak = getOverallStreak();
+  if (streak >= 3) { streakBadge.textContent = `🔥 ${streak} Day Streak`; streakBadge.classList.add('active'); }
+  else { streakBadge.classList.remove('active'); }
+}
+
+function renderQuoteBanner() {
+  const q = QUOTES[currentQuoteIdx];
+  const pill = document.getElementById('quote-pill');
+  pill.textContent = q.type === 'stoic' ? 'Stoic' : 'Scripture';
+  pill.className = 'quote-type-pill ' + (q.type === 'stoic' ? 'stoic' : 'bible');
+  document.getElementById('banner-quote-text').textContent = q.text;
+  document.getElementById('banner-quote-author').textContent = '— ' + q.author;
+}
+document.getElementById('quote-refresh-btn').addEventListener('click', () => { currentQuoteIdx = (currentQuoteIdx + 1) % QUOTES.length; renderQuoteBanner(); });
+
+// ===================== STATE UTILS =====================
+const DAY_NAMES = ["sun","mon","tue","wed","thu","fri","sat"];
+let _today = new Date(); let selectedDateKey = todayKey();
+let calViewYear = _today.getFullYear(); let calViewMonth = _today.getMonth();
+let collapsedPhases = new Set(); let editingJournalId = null;
+
+function todayKey() { return fmtKey(new Date()); }
+function fmtKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function keyFromYMD(y, m, day) { return `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
+function getDayType(dateStr) { const dow = new Date(dateStr + 'T12:00:00').getDay(); if (dow === 0) return 'sunday'; if (dow === 6) return 'saturday'; if ([1,3,5].includes(dow)) return 'office'; return 'wfh'; }
+function getDayTypeName(t) { return { office:'Office Day', wfh:'WFH Day', saturday:'Saturday', sunday:'Sunday' }[t] || 'Weekday'; }
+function getDayName(dateStr) { return DAY_NAMES[new Date(dateStr + 'T12:00:00').getDay()]; }
+
+// ===================== FILTERING & STREAKS =====================
+function habitsForDay(dateStr) {
+  const dayName = getDayName(dateStr); const result = {};
+  if (!data.phases) return result;
+  data.phases.forEach((phase, index) => {
+    const filtered = phase.habits.filter(h => h.days === 'all' || (Array.isArray(h.days) && h.days.includes(dayName)) || h.days === dayName);
+    if (filtered.length > 0) result['phase_'+index] = { ...phase, habits: filtered };
+  });
+  return result;
+}
+function totalHabitsForDay(dateStr) { let c = 0; for (const p of Object.values(habitsForDay(dateStr))) c += p.habits.length; return c; }
+function doneHabitsForDay(dateStr) {
+  const rec = getDayRecord(dateStr); let c = 0;
+  for (const p of Object.values(habitsForDay(dateStr))) { for (const h of p.habits) { if (rec.habits[h.id]) c++; } }
+  return c;
+}
+function getStreakForHabit(habitId) {
+  let streak = 0; const now = new Date();
+  for (let i = 0; i < 365; i++) { const d = new Date(now); d.setDate(d.getDate() - i); if (data[fmtKey(d)]?.habits[habitId]) streak++; else break; }
+  return streak;
+}
+function getOverallStreak() {
+  let streak = 0; const now = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(now); d.setDate(d.getDate() - i); const k = fmtKey(d);
+    const total = totalHabitsForDay(k); const done = doneHabitsForDay(k);
+    if (total > 0 && done / total >= 0.5) streak++; else break;
+  }
+  return streak;
+}
+
+// ===================== LIVE CLOCK =====================
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0'); const m = String(now.getMinutes()).padStart(2,'0'); const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('live-clock').textContent = `${h}:${m}:${s}`;
+  
+  const newTodayKey = fmtKey(now);
+  if (newTodayKey !== fmtKey(_today)) {
+    _today = now; selectedDateKey = newTodayKey; calViewYear = now.getFullYear(); calViewMonth = now.getMonth();
+    if (activeProfile) { updateGreeting(); checkAutomations(); renderAll(); }
+  }
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ===================== CALENDAR =====================
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOW_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+function getHeatLevel(dateStr) {
+  const total = totalHabitsForDay(dateStr); const done = doneHabitsForDay(dateStr);
+  if (total === 0) return 0; const r = done / total;
+  return r < 0.25 ? 1 : r < 0.5 ? 2 : r < 0.75 ? 3 : 4;
+}
+
+function renderCalendar() {
+  const y = calViewYear, m = calViewMonth;
+  document.getElementById('cal-month-label').textContent = `${MONTH_NAMES[m]} ${y}`;
+  const grid = document.getElementById('cal-grid'); grid.innerHTML = '';
+  DOW_LABELS.forEach(l => { const el = document.createElement('div'); el.className = 'cal-dow'; el.textContent = l; grid.appendChild(el); });
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const tk = todayKey();
+
+  for (let i = 0; i < firstDay; i++) { const el = document.createElement('div'); el.className = 'cal-cell empty'; grid.appendChild(el); }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const k = keyFromYMD(y, m, d);
+    const el = document.createElement('div'); el.className = 'cal-cell'; el.textContent = d;
+    const heat = getHeatLevel(k); if (heat > 0) el.setAttribute('data-heat', heat);
+    const hasHabits = data[k] && Object.values(data[k].habits || {}).some(Boolean);
+    if (hasHabits) el.classList.add('has-data');
+    if (k === tk) el.classList.add('today');
+    if (k === selectedDateKey) el.classList.add('selected');
+    el.addEventListener('click', () => { selectedDateKey = k; renderAll(); });
+    grid.appendChild(el);
+  }
+}
+
+document.getElementById('cal-prev').addEventListener('click', () => { calViewMonth--; if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; } renderCalendar(); });
+document.getElementById('cal-next').addEventListener('click', () => { calViewMonth++; if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; } renderCalendar(); });
+document.getElementById('cal-today-btn').addEventListener('click', () => { const now = new Date(); calViewYear = now.getFullYear(); calViewMonth = now.getMonth(); selectedDateKey = todayKey(); renderAll(); });
+
+// ===================== RENDER CORE =====================
+let pendingUpcomingHabitId = null;
+
+function renderUpcomingHabit() {
+  const squarcle = document.getElementById('upcoming-squarcle');
+  
+  // Only show upcoming habit for TODAY
+  if (selectedDateKey !== todayKey()) {
+    squarcle.style.display = 'none';
+    pendingUpcomingHabitId = null;
+    return;
+  }
+
+  const phases = habitsForDay(todayKey());
+  let allTodayHabits = [];
+  
+  for (const phase of Object.values(phases)) {
+    allTodayHabits = allTodayHabits.concat(phase.habits);
+  }
+
+  // Sort by time chronologically
+  allTodayHabits.sort((a, b) => (a.time || "23:59").localeCompare(b.time || "23:59"));
+
+  // Find first habit that is not done
+  const nextHabit = allTodayHabits.find(h => !isHabitDone(todayKey(), h.id));
+
+  if (nextHabit) {
+    document.getElementById('upcoming-time').textContent = nextHabit.time || "Anytime";
+    document.getElementById('upcoming-name').textContent = nextHabit.name;
+    pendingUpcomingHabitId = nextHabit.id;
+    squarcle.style.display = 'flex';
+  } else {
+    squarcle.style.display = 'none';
+    pendingUpcomingHabitId = null;
+  }
+}
+
+window.completeUpcomingHabit = function() {
+  if (pendingUpcomingHabitId) {
+    toggleHabit(todayKey(), pendingUpcomingHabitId);
+    showToast("Habit Completed ✓");
+    renderAll();
+  }
+};
+
+function renderHeader() {
+  const d = new Date(selectedDateKey + 'T12:00:00');
+  document.getElementById('current-date').textContent = d.toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('day-type-badge').textContent = getDayTypeName(getDayType(selectedDateKey));
+}
+
+function renderStats() {
+  const total = totalHabitsForDay(selectedDateKey);
+  const done = doneHabitsForDay(selectedDateKey);
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('stat-today').textContent = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('stat-streak').textContent = getOverallStreak();
+
+  let weekDone = 0;
+  for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate() - i); weekDone += doneHabitsForDay(fmtKey(d)); }
+  document.getElementById('stat-week').textContent = weekDone;
+  const loggedDaysCount = Object.keys(data).filter(k => !['phases', 'lastBackupPrompt', 'lastMorningPrompt'].includes(k)).length;
+  document.getElementById('stat-days').textContent = loggedDaysCount;
+}
+
+function renderHabits() {
+  const container = document.getElementById('habits-container'); container.innerHTML = '';
+  const phases = habitsForDay(selectedDateKey);
+
+  for (const [pk, phase] of Object.entries(phases)) {
+    const section = document.createElement('div'); section.className = `phase-section ${collapsedPhases.has(pk) ? 'collapsed' : ''}`;
+    section.innerHTML = `
+      <div class="phase-header" id="header-${pk}">
+        <span class="phase-tag ${phase.class}">${phase.label}</span>
+        <h2>${phase.title}</h2>
+        <span class="phase-chevron">▾</span>
+      </div>
+      <div class="habits-grid" id="grid-${pk}"></div>
+    `;
+    container.appendChild(section);
+    
+    section.querySelector(`#header-${pk}`).addEventListener('click', () => {
+      if (collapsedPhases.has(pk)) { collapsedPhases.delete(pk); section.classList.remove('collapsed'); }
+      else { collapsedPhases.add(pk); section.classList.add('collapsed'); }
+    });
+
+    // Sort habits in phase by time before rendering
+    const sortedHabits = [...phase.habits].sort((a, b) => (a.time || "23:59").localeCompare(b.time || "23:59"));
+
+    const grid = section.querySelector(`#grid-${pk}`);
+    for (const habit of sortedHabits) {
+      const done = isHabitDone(selectedDateKey, habit.id);
+      const streak = getStreakForHabit(habit.id);
+      const card = document.createElement('div'); card.className = `habit-card ${phase.class}${done ? ' done' : ''}`;
+
+      const timeHtml = habit.time ? `<span class="habit-time-pill">${habit.time}</span>` : '';
+
+      card.innerHTML = `
+        <div class="habit-left">
+          <div class="habit-name">${habit.name}</div>
+          <div class="habit-meta-row">
+            ${timeHtml}
+            <span class="habit-meta">${habit.meta}</span>
+          </div>
+        </div>
+        <div class="habit-right">
+          <div class="streak-badge ${streak >= 3 ? 'hot' : ''}">${streak > 0 ? '🔥 ' + streak + 'd' : ''}</div>
+          <div class="check-box"><span class="check-icon">✓</span></div>
+        </div>
+      `;
+      card.addEventListener('click', () => { toggleHabit(selectedDateKey, habit.id); renderAll(); if (isHabitDone(selectedDateKey, habit.id)) showToast(habit.name + ' ✓'); });
+      grid.appendChild(card);
+    }
+  }
+}
+
+// ===================== JOURNAL =====================
+function renderJournal() {
+  const rec = getDayRecord(selectedDateKey);
+  const list = document.getElementById('journal-entries-list'); list.innerHTML = '';
+  
+  rec.journalEntries.forEach(entry => {
+    const card = document.createElement('div'); card.className = 'journal-entry-card';
+    
+    // Tag formatting
+    let tagClass = "tag-other";
+    if (entry.tag === "Morning Journal") tagClass = "tag-morning";
+    else if (entry.tag === "Evening Journal") tagClass = "tag-evening";
+    const tagHtml = entry.tag ? `<span class="journal-tag ${tagClass}">${entry.tag}</span>` : '';
+
+    card.innerHTML = `
+      <div class="journal-entry-text" id="text-${entry.id}">${entry.text}</div>
+      <div class="journal-entry-meta">
+        <span class="journal-time">${entry.timestamp} ${tagHtml}</span>
+        <div class="journal-actions">
+          <button class="journal-action-btn" onclick="toggleJournalFold(${entry.id}, this)">Unfold</button>
+          <button class="journal-action-btn" onclick="editJournalEntry(${entry.id})">Edit</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  document.getElementById('journal-textarea').value = '';
+  const btn = document.getElementById('journal-save-btn'); const cancelBtn = document.getElementById('journal-cancel-btn');
+  btn.textContent = 'Save Entry'; btn.classList.remove('saved'); cancelBtn.style.display = 'none'; editingJournalId = null;
+}
+
+window.toggleJournalFold = function(id, btnElement) {
+  const card = document.getElementById(`text-${id}`).parentElement;
+  if (card.classList.contains('expanded')) { card.classList.remove('expanded'); btnElement.textContent = 'Unfold'; }
+  else { card.classList.add('expanded'); btnElement.textContent = 'Fold'; }
+};
+window.editJournalEntry = function(id) {
+  const rec = getDayRecord(selectedDateKey); const entry = rec.journalEntries.find(e => e.id === id);
+  if (entry) {
+    document.getElementById('journal-textarea').value = entry.text;
+    document.getElementById('journal-save-btn').textContent = 'Update Entry';
+    document.getElementById('journal-cancel-btn').style.display = 'block';
+    editingJournalId = id; document.getElementById('journal-textarea').focus();
+  }
+};
+
+document.getElementById('journal-save-btn').addEventListener('click', () => {
+  const text = document.getElementById('journal-textarea').value.trim(); if (!text) return; 
+  const rec = getDayRecord(selectedDateKey);
+  
+  if (editingJournalId) { 
+    const entry = rec.journalEntries.find(e => e.id === editingJournalId); 
+    if (entry) entry.text = text; 
+  } else {
+    const now = new Date();
+    const hour = now.getHours();
+    const tag = (hour >= 1 && hour < 12) ? "Morning Journal" : "Evening Journal";
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    rec.journalEntries.push({ id: Date.now(), text: text, timestamp: timeStr, tag: tag });
+  }
+
+  saveData(); renderJournal(); 
+  const btn = document.getElementById('journal-save-btn');
+  btn.textContent = 'Saved ✓'; btn.classList.add('saved');
+  setTimeout(() => { if (!editingJournalId) btn.textContent = 'Save Entry'; btn.classList.remove('saved'); }, 2000);
+});
+document.getElementById('journal-cancel-btn').addEventListener('click', () => { renderJournal(); });
+
+function renderHeatmap() {
+  const grid = document.getElementById('heatmap-grid'); grid.innerHTML = '';
+  const today = new Date(); const days = 91; const cells = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const k = fmtKey(d); const total = totalHabitsForDay(k); const done = doneHabitsForDay(k);
+    const ratio = total > 0 ? done / total : 0;
+    const level = ratio === 0 ? 0 : ratio < 0.25 ? 1 : ratio < 0.5 ? 2 : ratio < 0.75 ? 3 : 4;
+    cells.push({ k, level, done, total, label: d.toLocaleDateString('en-PH', { month:'short', day:'numeric' }) });
+  }
+  const firstDow = new Date(today.getFullYear(), today.getMonth(), today.getDate() - days + 1).getDay();
+  let col = null, dayInWeek = firstDow;
+
+  for (let i = 0; i < cells.length; i++) {
+    if (dayInWeek === 0 || i === 0) {
+      col = document.createElement('div'); col.className = 'heatmap-week'; grid.appendChild(col);
+      if (i === 0 && dayInWeek > 0) { for (let p = 0; p < dayInWeek; p++) { const e = document.createElement('div'); e.className = 'heatmap-cell'; col.appendChild(e); } }
+    }
+    const cell = document.createElement('div'); cell.className = 'heatmap-cell'; cell.setAttribute('data-level', cells[i].level);
+    cell.setAttribute('data-tooltip', `${cells[i].label}: ${cells[i].done}/${cells[i].total} habits`);
+    col.appendChild(cell); dayInWeek = (dayInWeek + 1) % 7;
+  }
+}
+
+function renderAll() {
+  renderUpcomingHabit();
+  renderHeader(); renderCalendar(); renderStats(); renderHabits(); renderJournal(); renderHeatmap();
+}
+
+// ===================== TOAST =====================
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===================== INIT =====================
+renderQuoteBanner();
+initAuth();
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (!activeProfile) return;
+  if (document.getElementById('settings-modal').style.display === 'block') return;
+  if (document.getElementById('custom-prompt-modal').style.display === 'flex') return;
+  if (document.getElementById('morning-modal').style.display === 'flex') return;
+  
+  if (e.key === 't') { selectedDateKey = todayKey(); calViewYear = new Date().getFullYear(); calViewMonth = new Date().getMonth(); renderAll(); showToast('Jumped to today'); }
+  if (e.key === 'q') { currentQuoteIdx = (currentQuoteIdx + 1) % QUOTES.length; renderQuoteBanner(); }
+});
+</script>
+</body>
+</html>
